@@ -1,8 +1,7 @@
 .PHONY: build
 build:
-	@mkdir -p target/classes
-	@javac -cp ".:src/main/java" -d target/classes $(shell find src/main/java -name "*.java")
+	@mvn -q compile
 
 .PHONY: run
-run: build
-	@java -cp ".:target/classes" app.soundlab.ui.MainWindow
+run:
+	@mvn -q exec:java -Dexec.mainClass=app.soundlab.ui.MainWindow

@@ -27,7 +27,7 @@ public class EventsHub {
     public void notifySubscribers(String event) {
         List<EventSink> users = listeners.get(event);
         for (EventSink listener : users) {
-            listener.update();
+            listener.handleEvent();
         }
     }
 }

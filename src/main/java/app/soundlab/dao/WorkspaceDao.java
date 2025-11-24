@@ -1,30 +1,40 @@
 package app.soundlab.dao;
 
-import java.util.ArrayList;
+import app.soundlab.db.DatabaseContext;
+
 import java.util.List;
 
 public class WorkspaceDao {
-    public void addWorkspace(String name) {
-        System.out.println("WorkspaceDao.addWorkspace: name='" + name + "'");
-        System.out.println("[SIMULATION] Workspace inserted");
+    public void addWorkspace(String title) {
+        DatabaseContext.update(
+                "INSERT INTO Workspace (title) VALUES (?)",
+                statement -> statement.setString(1, title)
+        );
     }
 
     public List<String> getAllWorkspaces() {
-        System.out.println("WorkspaceDao.getAllWorkspaces: fetch all workspaces (simulated)");
-        List<String> workspaceList = new ArrayList<>();
-        workspaceList.add("\"Demo Workspace\" - last save: 2025-10-29 12:00:00");
-        workspaceList.add("\"Another Workspace\" - last save: 2025-10-28 18:30:00");
-        return workspaceList;
+        return DatabaseContext.query(
+                "SELECT title, created_at FROM Workspace ORDER BY id DESC",
+                statement -> {},
+                rs -> "\"" + rs.getString("title") + "\" - last save: " + rs.getString("created_at")
+        );
     }
 
     public void addAudioToWorkspace(int workspaceId, int audioId) {
-        System.out.println("WorkspaceDao.addAudioToWorkspace: workspaceId=" + workspaceId + ", audioId=" + audioId);
-        System.out.println("[SIMULATION] Workspace_Audio relation inserted");
+        DatabaseContext.update(
+                "INSERT INTO Workspace_Audio (workspace_id, audio_id) VALUES (?, ?)",
+                statement -> {
+                    statement.setInt(1, workspaceId);
+                    statement.setInt(2, audioId);
+                }
+        );
     }
 
-    public int getLastInsertedWorkspaceId() {
-        System.out.println("WorkspaceDao.getLastInsertedWorkspaceId: return last id (simulated)");
-        return 42;
+    public int getLastInsertedWorkspaceID() {
+        return DatabaseContext.queryForObject(
+                        "SELECT id FROM Workspace ORDER BY id DESC LIMIT 1",
+                        statement -> {},
+                        rs -> rs.getInt("id"))
+                .orElse(-1);
     }
 }
-

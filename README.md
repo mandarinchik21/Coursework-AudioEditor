@@ -1,27 +1,20 @@
-How to build and run
+# Audio Editor
 
-From the `AudioEditor` directory:
+## Requirements
+- Java 17 or higher
+- Maven 3.8+
 
-Build:
-
+## Build
 ```bash
-mkdir -p target/classes
-javac -cp ".:src/main/java" -d target/classes $(find src/main/java -name "*.java")
+mvn -q compile
 ```
 
-Run:
-
+## Run
 ```bash
-java -cp target/classes app.soundlab.ui.MainWindow
+mvn -q exec:java -Dexec.mainClass=app.soundlab.ui.MainWindow
 ```
 
-Or using Makefile (recommended):
-
+Or using Makefile:
 ```bash
-cd AudioEditor
 make run
 ```
-
-Requirements:
-- JDK 17+ installed and on PATH (`java -version`, `javac -version`).
-

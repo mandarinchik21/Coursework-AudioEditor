@@ -1,7 +1,13 @@
 package app.soundlab.audioencoder;
 
-import app.soundlab.audiotrack.SegmentEntity;
+import app.soundlab.audiotrack.SegmentEncodingAdapter;
+
+import java.io.File;
 
 public interface AudioEncoder<T> {
-    T convert(SegmentEntity audio);
+    T encode(SegmentEncodingAdapter adapter);
+    
+    File encode(File inputFile, File outputFile);
+    
+    String getFormat();
 }

@@ -1,39 +1,48 @@
 package app.soundlab.dao;
 
-import app.soundlab.db.DatabaseConnector;
+import app.soundlab.db.DatabaseContext;
 
-import java.util.ArrayList;
 import java.util.List;
 
-public class AudioDao extends DatabaseConnector {
-    public AudioDao() {
-        super();
-    }
-
-    public void create(String name, String format, String path) {
-        System.out.println("AudioDao.create: name='" + name + "', format='" + format + "', path='" + path + "'");
-        System.out.println("[SIMULATION] Audio record inserted");
-    }
-
-    public List<String> getAll() {
-        System.out.println("AudioDao.getAllAudio: fetch all audios (simulated)");
-        List<String> audioList = new ArrayList<>();
-        audioList.add("sample1.mp3 - /path/sample1.mp3");
-        audioList.add("sample2.ogg - /path/sample2.ogg");
-        return audioList;
-    }
-
-    public List<String> getByWorkspace(int workspaceId) {
-        System.out.println("AudioDao.getAudioByWorkspace: workspaceId=" + workspaceId + " (simulated)");
-        List<String> audioList = new ArrayList<>();
-        audioList.add("workspace-audio-1.mp3");
-        audioList.add("workspace-audio-2.flac");
-        return audioList;
+public class AudioDao {
+    public void create(String title, String format, String path) {
+        DatabaseContext.update(
+                "INSERT INTO Audio (title, format, path) VALUES (?, ?, ?)",
+                statement -> {
+                    statement.setString(1, title);
+                    statement.setString(2, format);
+                    statement.setString(3, path);
+                }
+        );
     }
 
     public boolean exists(String path) {
-        System.out.println("AudioDao.audioExists: path='" + path + "' (simulated)");
-        return false;
+        return DatabaseContext.queryForObject(
+                        "SELECT COUNT(*) AS count FROM Audio WHERE path = ?",
+                        statement -> statement.setString(1, path),
+                        rs -> rs.getInt("count"))
+                .map(count -> count > 0)
+                .orElse(false);
+    }
+
+    public List<String> getAll() {
+        return DatabaseContext.query(
+                "SELECT title, path FROM Audio ORDER BY id DESC",
+                statement -> {},
+                rs -> rs.getString("title") + " - " + rs.getString("path")
+        );
+    }
+
+    public List<String> getByWorkspaceID(int workspaceId) {
+        String sql = """
+            SELECT Audio.title FROM Audio
+            JOIN Workspace_Audio ON Audio.id = Workspace_Audio.audio_id
+            WHERE Workspace_Audio.workspace_id = ?
+            """;
+        return DatabaseContext.query(
+                sql,
+                statement -> statement.setInt(1, workspaceId),
+                rs -> rs.getString("title")
+        );
     }
 }
-

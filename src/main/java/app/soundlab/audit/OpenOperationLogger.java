@@ -7,14 +7,18 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 public class OpenOperationLogger implements EventSink {
-    private File logFile;
+    private final File logFile;
 
     public OpenOperationLogger(File logFile) {
        this.logFile = logFile;
     }
 
     @Override
-    public void update() {
+    public void handleEvent() {
+        File parent = logFile.getParentFile();
+        if (parent != null && !parent.exists()) {
+            parent.mkdirs();
+        }
         try (FileWriter writer = new FileWriter(logFile, true)) {
             writer.write("File was opened at " + LocalTime.now() + " " + LocalDate.now() + "\n");
         } catch (IOException e) {

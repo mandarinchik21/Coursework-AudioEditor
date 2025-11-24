@@ -5,13 +5,13 @@ import java.io.File;
 public class AuditLog {
     EventsHub eventManager;
     final File logFile = new File("audit/logs.txt");
-    OpenOperationLogger fileOpenLog;
+    OpenOperationLogger operationLogger;
 
     public AuditLog() {
         eventManager = new EventsHub("openFile");
 
-        fileOpenLog = new OpenOperationLogger(logFile);
-        eventManager.subscribe(fileOpenLog, "openFile");
+        operationLogger = new OpenOperationLogger(logFile);
+        eventManager.subscribe(operationLogger, "openFile");
     }
 
     public void fileOpen() {

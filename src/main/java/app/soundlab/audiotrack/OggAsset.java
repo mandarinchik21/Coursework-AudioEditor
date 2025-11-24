@@ -1,28 +1,99 @@
 package app.soundlab.audiotrack;
 
+import app.soundlab.audioencoder.OggEncoder;
+import ws.schild.jave.Encoder;
+import ws.schild.jave.MultimediaObject;
+import ws.schild.jave.encode.AudioAttributes;
+import ws.schild.jave.encode.EncodingAttributes;
+
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
 import java.io.File;
 
 public class OggAsset extends SegmentEntity {
-    private File fileLink;
+    private final AudioAttributes audioAttributes;
+    private final File fileLink;
 
     public OggAsset(String filePath) {
         super(filePath);
         checkFileFormat(filePath);
-        fileLink = new File(filePath);
+        this.fileLink = new File(filePath);
+        this.audioAttributes = new AudioAttributes();
+        audioAttributes.setCodec("libvorbis");
+        audioAttributes.setBitRate(128000);
+        audioAttributes.setChannels(2);
+        audioAttributes.setSamplingRate(44100);
+        try {
+            loadAudioDataWithJave(fileLink);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to load audio data: " + e.getMessage());
+        }
+    }
 
-        System.out.println("OGG file initialized with codec: libvorbis, bitrate: 128kbps");
+    private void loadAudioDataWithJave(File audioFile) throws Exception {
+        AudioAttributes audio = new AudioAttributes();
+        audio.setCodec("pcm_s16le");
+        EncodingAttributes attrs = new EncodingAttributes();
+        attrs.setOutputFormat("wav");
+        attrs.setAudioAttributes(audio);
+        File tempWav = File.createTempFile("temp_audio", ".wav");
+        Encoder encoder = new Encoder();
+        encoder.encode(new MultimediaObject(audioFile), tempWav, attrs);
+        loadPcmData(tempWav);
+        if (!tempWav.delete()) {
+            tempWav.deleteOnExit();
+        }
+    }
+
+    private static final int BYTES_PER_SAMPLE = 2;
+    private static final int READ_BUFFER_SIZE = 65536;
+    private static final int BATCH_SIZE = 32768;
+
+    private void loadPcmData(File wavFile) throws Exception {
+        try (AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(wavFile)) {
+            AudioFormat format = audioInputStream.getFormat();
+            long frameLength = audioInputStream.getFrameLength();
+            
+            if (frameLength > 0) {
+                int estimatedSamples = (int) (frameLength * format.getChannels());
+                ((java.util.ArrayList<Float>) audioData).ensureCapacity(estimatedSamples);
+            }
+            
+            byte[] buffer = new byte[READ_BUFFER_SIZE];
+            java.util.ArrayList<Float> tempSamples = new java.util.ArrayList<>(BATCH_SIZE);
+            
+            int bytesRead;
+            while ((bytesRead = audioInputStream.read(buffer)) != -1) {
+                for (int i = 0; i < bytesRead; i += BYTES_PER_SAMPLE) {
+                    int sample = readLittleEndianShort(buffer, i);
+                    tempSamples.add((float) sample);
+                    
+                    if (tempSamples.size() >= BATCH_SIZE) {
+                        audioData.addAll(tempSamples);
+                        tempSamples.clear();
+                    }
+                }
+            }
+            
+            if (!tempSamples.isEmpty()) {
+                audioData.addAll(tempSamples);
+            }
+        }
+    }
+    
+    private int readLittleEndianShort(byte[] data, int offset) {
+        return (data[offset + 1] << 8) | (data[offset] & 0xFF);
     }
 
     private void checkFileFormat(String path) {
         File file = new File(path);
         if (!file.exists() || !file.isFile()) {
-            System.out.println("Warning: File does not exist or is not a valid file: " + path);
-            return;
+            throw new IllegalArgumentException("File does not exist or is not a valid file.");
         }
-
         String extension = getFileExtension(file);
         if (!"ogg".equalsIgnoreCase(extension)) {
-            System.out.println("Error: Expected OGG format, but got: " + extension);
+            throw new IllegalArgumentException("Wrong audio format. Expected OGG, but got: " + extension);
         }
     }
 
@@ -44,8 +115,19 @@ public class OggAsset extends SegmentEntity {
 
     @Override
     public void saveAs(String outputFilePath) {
-        System.out.println("Converting to OGG format...");
         super.saveAs(outputFilePath);
-        System.out.println("OGG encoding completed with libvorbis codec");
+        try {
+            File tempWav = new File(outputFilePath);
+            if (!tempWav.exists()) {
+                throw new RuntimeException("Temporary WAV file not found.");
+            }
+            File output = new File(outputFilePath.replace(".wav", ".ogg"));
+            OggEncoder.get().encode(tempWav, output);
+            if (!tempWav.delete()) {
+                System.err.println("Failed to delete temporary WAV file.");
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error encoding OGG file: " + e.getMessage());
+        }
     }
 }

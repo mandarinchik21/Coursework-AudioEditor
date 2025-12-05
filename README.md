@@ -3,6 +3,7 @@
 ## Requirements
 - Java 17 or higher
 - Maven 3.8+
+- Make
 
 ## Build
 ```bash
